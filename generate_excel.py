@@ -32,6 +32,7 @@ Design highlights (these fix the flaws of the previous version):
 
 import os
 import re
+import datetime
 import openpyxl
 from openpyxl import Workbook
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -50,6 +51,16 @@ RAM_SHEET = "Ram - Digital ToDo"
 SHYAM_SHEET = "Shyam - Call ToDo"
 
 DEFAULT_COUNTRY_CODE = "+91"  # Assumption: candidates are India-based (see docs)
+
+# --- Simulation clock -------------------------------------------------------
+# The sample data is dated 2 Nov 2022. Instead of counting down from the real
+# system date (which would make "Hours Left" a huge negative number), the whole
+# workbook counts down from this editable "Treat now as" clock cell. Default it
+# to the evening of 2 Nov 2022, i.e. "the batch just arrived, start scheduling".
+# A reviewer can edit the cell (KPI Dashboard!G2) to advance time and watch the
+# urgency / heat-map change.
+CLOCK_DEFAULT = datetime.datetime(2022, 11, 2, 20, 0)
+CLOCK_CELL = "'KPI Dashboard'!$G$2"
 
 # Palette
 NAVY = "1F3864"
@@ -471,7 +482,7 @@ def build_ram(wb, requests):
             f"REQ-{i+1:04d}",
             req["added_on"],
             f"=B{r}+1",
-            f"=(C{r}-NOW())*24",
+            f"=(C{r}-{CLOCK_CELL})*24",
             # NEXT STEP
             (f'=IF(N{r}="","STEP 1: Send WhatsApp + Email blast now (Playbook M1)",'
              f'IF(N{r}="Bad contact","STOP: report bad contact to lead (Playbook)",'
@@ -543,7 +554,7 @@ def build_shyam(wb, requests):
             f"REQ-{i+1:04d}",
             req["added_on"],
             f"=B{r}+1",
-            f"=(C{r}-NOW())*24",
+            f"=(C{r}-{CLOCK_CELL})*24",
             # NEEDS CALL?  (reads Ram's escalation for the same request)
             (f'=IF({ram}!Q{r}="Escalate to call","CALL NOW",'
              f'IF({ram}!N{r}="Bad contact","CALL NOW (digital failed)",'
@@ -662,6 +673,21 @@ def build_dashboard(wb, requests):
     t.font = Font(bold=True, size=18, color=NAVY)
     ws.cell(row=2, column=2, value="Target: 80% of eligible requests scheduled within 24 hours.").font = Font(
         italic=True, size=11, color=GREEN)
+
+    # Editable "system clock". Hours Left in both queues counts down from this
+    # cell, so the demo is sensible even though the sample data is from 2022.
+    set_widths(ws, {"F": 30, "G": 20})
+    lbl = ws.cell(row=2, column=6, value="TREAT 'NOW' AS (edit to advance time):")
+    lbl.font = Font(bold=True, size=11, color=NAVY)
+    lbl.alignment = Alignment(horizontal="right", vertical="center")
+    clk = ws.cell(row=2, column=7, value=CLOCK_DEFAULT)
+    clk.number_format = "yyyy-mm-dd hh:mm"
+    clk.font = Font(bold=True, size=12, color=WHITE)
+    clk.fill = PatternFill("solid", fgColor=AMBER)
+    clk.alignment = Alignment(horizontal="center", vertical="center")
+    clk.border = BORDER
+    ws.cell(row=3, column=6, value="(All 'Hours Left' countdowns are measured from this moment.)").font = Font(
+        italic=True, size=9, color=GREY)
 
     rows = [
         ("Metric", "Value", "Notes", "header"),                                    # r4

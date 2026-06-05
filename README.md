@@ -54,7 +54,6 @@ Calendly link before the 24-hour clock runs out."** That splits into four units:
 ---
 
 ## The cadence (anchored to each request's `Added On`, not a fixed clock)
-
 | Time | Owner | Action |
 |---|---|---|
 | **T+0h** | Ram | WhatsApp + Email blast with the round's Calendly link and a clear deadline |
@@ -125,9 +124,22 @@ for requests that arrive later in the day; this version starts the clock per req
 
 ---
 
+## The simulation clock (why `Hours Left` looks sensible)
+
+`Hours Left` is the countdown to each request's 24h deadline. It is measured from an
+**editable "system clock"** cell on the **KPI Dashboard** (`G2`), labelled
+*"TREAT 'NOW' AS"*, rather than the real system date.
+
+Why: the sample data is dated **2 Nov 2022**. If the countdown used today's real date,
+every request would show as tens of thousands of hours overdue. Instead the clock defaults
+to **2 Nov 2022, 20:00** ("the batch just arrived"), so `Hours Left` shows realistic values
+(roughly 14–24h for the sample). **Edit `G2`** (for example to `3 Nov 2022 09:00`) to advance
+time and watch the heat-map shift green → amber → red as deadlines approach. In real use you
+can set `G2` to "today" or swap the formula back to `NOW()`.
+
 ## How the automation works (for reviewers)
 
-- **Live countdown:** `Hours Left = (SLA Deadline - NOW()) * 24`, where `SLA Deadline = Added On + 1 day`.
+- **Live countdown:** `Hours Left = (SLA Deadline - Clock) * 24`, where `SLA Deadline = Added On + 1 day` and `Clock` is the editable KPI Dashboard `G2` cell (see above).
 - **Guidance:** the `NEXT STEP` columns are nested `IF` formulas over the step dropdowns, so a row updates itself as the intern fills it in.
 - **Hand-off:** Shyam's `NEEDS CALL?` formula reads Ram's escalation cell for the **same row** (`='Ram - Digital ToDo'!Q{row}`), so escalations appear in Shyam's queue automatically — he just filters `NEEDS CALL? = CALL NOW`.
 - **Single source of truth:** Shyam's `FINAL OUTCOME` column classifies each request (scheduled self-serve / scheduled on call / declined / SLA breach / in progress). The dashboard's `COUNTIF`s read this column. (Outcome labels deliberately avoid `<`/`>` so `COUNTIF` treats them as literal text.)
